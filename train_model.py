@@ -41,25 +41,29 @@ def generator(samples, batch_size=32):
             right_filename = line[2].split('/')[-1]
             right_path = IMGPATH + right_filename
             image = cv2.imread(current_path)
-            left_image = cv2.imread(left_path)
-            right_image = cv2.imread(right_path)
+            
             if image is None:
                 print('Incorrect path', current_path)
             else:
-                images.extend([image, left_image, right_image])
                 measurement = float(line[3])
-                steering_left = measurement + correction
-                steering_right = measurement - correction
-                measurements.extend([measurement, steering_left, steering_right])
-                image_flipped = np.fliplr(image)
-                left_image_flipped = np.fliplr(left_image)
-                right_image_flipped = np.fliplr(right_image)
-                measurement_flipped = -measurement
-                steering_left_flipped = -steering_left
-                steering_right_flipped = -steering_right
-                images.extend([image_flipped, left_image_flipped, \
-                    right_image_flipped])
-                measurements.extend([measurement_flipped, steering_left_flipped, \
+                images.append(image)
+                measurements.append(measurement)
+                if measurement > 0.9 or measurement < -0.9:
+                    left_image = cv2.imread(left_path)
+                    right_image = cv2.imread(right_path)
+                    steering_left = measurement + correction
+                    steering_right = measurement - correction
+                    images.extend([left_image, right_image])
+                    measurements.extend([steering_left, steering_right])
+                    image_flipped = np.fliplr(image)
+                    left_image_flipped = np.fliplr(left_image)
+                    right_image_flipped = np.fliplr(right_image)
+                    measurement_flipped = -measurement
+                    steering_left_flipped = -steering_left
+                    steering_right_flipped = -steering_right
+                    images.extend([image_flipped, left_image_flipped, \
+                        right_image_flipped])
+                    measurements.extend([measurement_flipped, steering_left_flipped, \
                     steering_right_flipped])
         # trim image to only see section with road
 
@@ -95,7 +99,7 @@ model.add(Dense(1))
 
 model.compile(loss='mse', optimizer='adam')
 
-samples =  2*3*len(train_samples)
+samples =  3*len(train_samples)
 
 history_object = model.fit_generator(train_generator, \
             samples_per_epoch= (samples//batch_size)*batch_size, \
