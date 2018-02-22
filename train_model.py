@@ -3,7 +3,7 @@ import csv
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 FOLDER = './newbestdata/'
-MODEL = 'newbestdatatrain2'
+MODEL = 'newbestdatatrain3'
 
 samples = []
 with open(FOLDER+'driving_log.csv') as csvfile:
@@ -41,22 +41,22 @@ def generator(samples, batch_size=32):
             right_filename = line[2].split('/')[-1]
             right_path = IMGPATH + right_filename
             image = cv2.imread(current_path)
-            
+            left_image = cv2.imread(left_path)
+            right_image = cv2.imread(right_path)
             if image is None:
                 print('Incorrect path', current_path)
             else:
                 measurement = float(line[3])
                 images.append(image)
                 measurements.append(measurement)
+                images.extend([image, left_image, right_image])
+                measurement = float(line[3])
+                steering_left = measurement + correction
+                steering_right = measurement - correction
+                measurements.extend([measurement, steering_left, steering_right])
                 if measurement > 0.9 or measurement < -0.9:
-                    left_image = cv2.imread(left_path)
-                    right_image = cv2.imread(right_path)
-                    steering_left = measurement + correction
-                    steering_right = measurement - correction
-                    images.extend([left_image, right_image])
-                    measurements.extend([steering_left, steering_right])
-                    image_flipped = np.fliplr(image)
                     left_image_flipped = np.fliplr(left_image)
+                    image_flipped = np.fliplr(image)
                     right_image_flipped = np.fliplr(right_image)
                     measurement_flipped = -measurement
                     steering_left_flipped = -steering_left
@@ -86,13 +86,13 @@ model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))
 model.add(Cropping2D(cropping=((50,20), (0,0))))
 model.add(Conv2D(24,5,5,subsample=(2,2),activation = "elu"))
 model.add(Conv2D(36,5,5,subsample=(2,2),activation="elu"))
-model.add(Dropout(0.25))
+#model.add(Dropout(0.25))
 model.add(Conv2D(48,5,5,subsample=(2,2), activation='elu'))
 model.add(Conv2D(64,3,3,activation="elu"))
 model.add(Conv2D(64,3,3,activation="elu"))
 model.add(Flatten())
 model.add(Dense(100))
-model.add(Dropout(0.50))
+#model.add(Dropout(0.50))
 model.add(Dense(50))
 model.add(Dense(50))
 model.add(Dense(1))
