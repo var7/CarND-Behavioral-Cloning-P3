@@ -4,10 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 #import cPickle as pickle
 CREATE_DATA = True
+MODEL = 'newbestdata1'
 if CREATE_DATA == True:
 	lines = []
 
-	FOLDER = './data/'
+	FOLDER = './newbestdata/'
 	IMGPATH = FOLDER + 'IMG/'
 	with open(FOLDER+'driving_log.csv') as csvfile:
 		reader = csv.reader(csvfile)
@@ -63,11 +64,11 @@ from keras.layers import Conv2D, MaxPooling2D, Cropping2D
 
 model = Sequential()
 model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))
-model.add(Cropping2D(cropping=((70,25), (0,0))))
-model.add(Conv2D(24,5,5,subsample=(2,2),activation = "relu"))
-model.add(Conv2D(36,5,5,subsample=(2,2),activation="relu"))
+model.add(Cropping2D(cropping=((50,20), (0,0))))
+model.add(Conv2D(24,5,5,subsample=(2,2),activation = "elu"))
+model.add(Conv2D(36,5,5,subsample=(2,2),activation="elu"))
 model.add(Dropout(0.25))
-model.add(Conv2D(48,5,5,subsample=(2,2), activation='relu'))
+model.add(Conv2D(48,5,5,subsample=(2,2), activation='elu'))
 model.add(Conv2D(64,3,3,activation="relu"))
 model.add(Conv2D(64,3,3,activation="relu"))
 model.add(Flatten())
@@ -81,6 +82,7 @@ model.compile(loss='mse', optimizer='adam')
 
 history_object = model.fit(X_train, y_train, validation_split = 0.2, shuffle=True, nb_epoch=5)
 
+model.save(MODEL+'.h5')
 print(history_object.history.keys())
 plt.plot(history_object.history['loss'])
 plt.plot(history_object.history['val_loss'])
@@ -88,6 +90,5 @@ plt.title('model mean squared error loss')
 plt.ylabel('mean squared error loss')
 plt.xlabel('epoch')
 plt.legend(['training set', 'validation set'], loc='upper right')
-plt.savefig('2nvidia_model.png', bbox_inches='tight')
-model.save('2nvidia_model.h5')
+plt.savefig(MODEL+'.png', bbox_inches='tight')
 exit()
