@@ -24,33 +24,33 @@ def generator(samples, batch_size=32):
 
             images = []
             angles = []
-	    for line in batch_samples:
-          source_path = line[0]
-          filename = source_path.split('/')[-1]
-          current_path = IMGPATH + filename
-          left_filename = line[1].split('/')[-1]
-          left_path = IMGPATH + left_filename
-          right_filename = line[2].split('/')[-1]
-          right_path = IMGPATH + right_filename
-          image = cv2.imread(current_path)
-          left_image = cv2.imread(left_path)
-          right_image = cv2.imread(right_path)
-          if image is None:
-              print('Incorrect path', current_path)
-          else:
-              images.extend([image, left_image, right_image])
-              measurement = float(line[3])
-              steering_left = measurement + correction
-              steering_right = measurement - correction
-              measurements.extend([measurement, steering_left, steering_right])
-              image_flipped = np.fliplr(image)
-              left_image_flipped = np.fliplr(left_image)
-              right_image_flipped = np.fliplr(right_image)
-              measurement_flipped = -measurement
-              steering_left_flipped = -steering_left
-              steering_right_flipped = -steering_right
-              images.extend([image_flipped, left_image_flipped, right_image_flipped])
-              measurements.extend([measurement_flipped, steering_left_flipped, steering_right_flipped])
+        for line in batch_samples:
+        source_path = line[0]
+        filename = source_path.split('/')[-1]
+        current_path = IMGPATH + filename
+        left_filename = line[1].split('/')[-1]
+        left_path = IMGPATH + left_filename
+        right_filename = line[2].split('/')[-1]
+        right_path = IMGPATH + right_filename
+        image = cv2.imread(current_path)
+        left_image = cv2.imread(left_path)
+        right_image = cv2.imread(right_path)
+        if image is None:
+            print('Incorrect path', current_path)
+        else:
+            images.extend([image, left_image, right_image])
+            measurement = float(line[3])
+            steering_left = measurement + correction
+            steering_right = measurement - correction
+            measurements.extend([measurement, steering_left, steering_right])
+            image_flipped = np.fliplr(image)
+            left_image_flipped = np.fliplr(left_image)
+            right_image_flipped = np.fliplr(right_image)
+            measurement_flipped = -measurement
+            steering_left_flipped = -steering_left
+            steering_right_flipped = -steering_right
+            images.extend([image_flipped, left_image_flipped, right_image_flipped])
+            measurements.extend([measurement_flipped, steering_left_flipped, steering_right_flipped])
     # trim image to only see section with road
             X_train = np.array(images)
             y_train = np.array(measurements)
