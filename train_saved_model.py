@@ -2,11 +2,12 @@ import os
 import csv
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
-FOLDER = './newbestdata/'
-MODEL = 'newbestdatatrain3'
+DATA_FOLDER = './newbestdata/'
+NEW_MODEL_NAME = 'nvidia_datamodelv2'
+SAVED_MODEL_PATH = './models/nvidia_datamodel.h5'
 
 samples = []
-with open(FOLDER+'driving_log.csv') as csvfile:
+with open(DATA_FOLDER+'driving_log.csv') as csvfile:
     reader = csv.reader(csvfile)
     for line in reader:
         samples.append(line)
@@ -20,7 +21,7 @@ import cv2
 import numpy as np
 import sklearn
 
-IMGPATH = FOLDER + 'IMG/'
+IMGPATH = DATA_FOLDER + 'IMG/'
 
 def generator(samples, batch_size=32):
     correction = 0.5
@@ -100,9 +101,7 @@ def create_model():
 
 def train_model(model, model_name):
     model.compile(loss='mse', optimizer='adam')
-
     samples =  3*len(train_samples)
-
     history_object = model.fit_generator(train_generator, \
                 samples_per_epoch= (samples//batch_size)*batch_size, \
                 validation_data=validation_generator, \
@@ -110,6 +109,7 @@ def train_model(model, model_name):
                 nb_epoch=3)
 
     model.save(model_name+'.h5')
+    print('saved model')
     return history_object
 
 def load_trained_model(weights_path):
@@ -127,5 +127,5 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-MODEL_PATH = './'
-load_trained_model()
+saved_model = load_trained_model(SAVED_MODEL_PATH)
+train_model(saved_model, NEW_MODEL_NAME)
