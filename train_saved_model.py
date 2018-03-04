@@ -24,8 +24,10 @@ import sklearn
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 def generator(samples, batch_size=32):
-    correction = 0.2
+    correction = 0.3
     num_samples = len(samples)
+    limit_reached = True
+    count  = 0
     while 1: # Loop forever so the generator never terminates
         sklearn.utils.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
@@ -48,14 +50,15 @@ def generator(samples, batch_size=32):
                 print('Incorrect path', current_path)
             else:
                 measurement = float(line[3])
-                images.append(image)
-                measurements.append(measurement)
-                images.extend([image, left_image, right_image])
-                measurement = float(line[3])
-                steering_left = measurement + correction
-                steering_right = measurement - correction
-                measurements.extend([measurement, steering_left, steering_right])
-                if measurement > 0.25 or measurement < -0.25:
+                if limit_reached or abs(measurement) > 0.2:
+                    if abs(measurement) < 0.2:
+                        count = count+1
+                    if count > 5000:
+                        limit_reached = False
+                    images.extend([image, left_image, right_image])
+                    steering_left = measurement + correction
+                    steering_right = measurement - correction
+                    measurements.extend([measurement, steering_left, steering_right])
                     left_image_flipped = np.fliplr(left_image)
                     image_flipped = np.fliplr(image)
                     right_image_flipped = np.fliplr(right_image)
