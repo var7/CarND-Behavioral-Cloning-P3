@@ -4,8 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
 
-DATA_FOLDER = './dice_data/'
-NEW_MODEL_NAME = 'nvidia_datamodel-tutv1'
+DATA_FOLDER = './bestdata/'
+NEW_MODEL_NAME = 'nvidia_datamodel-tutv2'
 SAVED_MODEL_PATH = './models/nvidia_datamodel.h5'
 
 lines = []
@@ -21,6 +21,7 @@ correction = 0.2
 images = []
 measurements = []
 limit_reached = True
+count = 0
 for line in lines:
 	source_path = line[0]
 	filename = source_path.split('/')[-1]
@@ -36,8 +37,8 @@ for line in lines:
 		print('Incorrect path', current_path)
 	else:
 		measurement = float(line[3])
-		if limit_reached or abs(measurement) > 0.5:
-			if abs(measurement) < 0.5:
+		if limit_reached or abs(measurement) > 1:
+			if abs(measurement) < 1:
 				count = count+1
 			if count > 2000:
 				limit_reached = False
@@ -56,8 +57,9 @@ for line in lines:
 
 X_train = np.array(images)
 y_train = np.array(measurements)
+print('count:', count)
 
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.layers import Flatten, Dense, Lambda, Dropout
 from keras.layers import Conv2D, MaxPooling2D, Cropping2D
 
@@ -80,12 +82,11 @@ def create_model():
     return model
 
 def train_model(model, model_name):
-	model.compile(loss='mse', optimizer='adam')
-
-	history_object = model.fit(X_train, y_train, validation_split = 0.2, shuffle=True, nb_epoch=5)
-
-	model.save(model_name+'.h5')
-	return history_object
+    model.compile(loss='mse', optimizer='adam')
+    history_object = model.fit(X_train, y_train, validation_split = 0.2, shuffle=True, nb_epoch=3)
+    model.save(model_name+'.h5')
+    print('saved model', model_name)
+    return history_object
 
 def load_trained_model(weights_path):
    # model = create_model()
