@@ -80,6 +80,7 @@ validation_generator = generator(validation_samples, batch_size=batch_size)
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Dropout
 from keras.layers import Conv2D, MaxPooling2D, Cropping2D
+from keras.models import load_model
 
 def create_model():
     model = Sequential()
@@ -113,8 +114,9 @@ def train_model(model, model_name):
     return history_object
 
 def load_trained_model(weights_path):
-   model = create_model()
-   model.load_weights(weights_path)
+   # model = create_model()
+   # model.load_weights(weights_path)
+   model = load_model(weights_path)
    return model
 
 def training_plots(history_object, model_name):
