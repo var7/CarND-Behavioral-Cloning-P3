@@ -2,8 +2,8 @@ import os
 import csv
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
-DATA_FOLDER = './newbestdata/'
-NEW_MODEL_NAME = 'nvidia_datamodelv2'
+DATA_FOLDER = './other_track/'
+NEW_MODEL_NAME = 'nvidia_datamodelv4-othertrack'
 SAVED_MODEL_PATH = './models/nvidia_datamodel.h5'
 
 samples = []
@@ -24,7 +24,7 @@ import sklearn
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 def generator(samples, batch_size=32):
-    correction = 0.5
+    correction = 0.2
     num_samples = len(samples)
     while 1: # Loop forever so the generator never terminates
         sklearn.utils.shuffle(samples)
@@ -55,7 +55,7 @@ def generator(samples, batch_size=32):
                 steering_left = measurement + correction
                 steering_right = measurement - correction
                 measurements.extend([measurement, steering_left, steering_right])
-                if measurement > 0.9 or measurement < -0.9:
+                if measurement > 0.25 or measurement < -0.25:
                     left_image_flipped = np.fliplr(left_image)
                     image_flipped = np.fliplr(image)
                     right_image_flipped = np.fliplr(right_image)
@@ -85,7 +85,7 @@ from keras.models import load_model
 def create_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))
-    model.add(Cropping2D(cropping=((50,20), (0,0))))
+    model.add(Cropping2D(cropping=((45,20), (0,0))))
     model.add(Conv2D(24,5,5,subsample=(2,2),activation = "elu"))
     model.add(Conv2D(36,5,5,subsample=(2,2),activation="elu"))
     #model.add(Dropout(0.25))
@@ -110,7 +110,7 @@ def train_model(model, model_name):
                 nb_epoch=3)
 
     model.save(model_name+'.h5')
-    print('saved model')
+    print('saved model', model_name)
     return history_object
 
 def load_trained_model(weights_path):
