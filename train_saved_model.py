@@ -1,8 +1,8 @@
 import os
 import csv
 import matplotlib.pyplot as plt
-plt.switch_backend('agg')
-DATA_FOLDER = './bestdata/'
+# plt.switch_backend('agg')
+DATA_FOLDER = './dice_data/'
 NEW_MODEL_NAME = 'nvidia_datamodelv33'
 SAVED_MODEL_PATH = './nvidia_datamodelv32.h5'
 
@@ -22,6 +22,38 @@ import numpy as np
 import sklearn
 
 IMGPATH = DATA_FOLDER + 'IMG/'
+
+def cull_data(samples, threshold = 0.2):
+    ind_to_be_deleted = []
+    total_length = len(samples)
+    count = 0
+    for ind, line in enumerate(samples):
+        angle = float(line[3])
+        if(abs(angle <= threshold)):
+            count = count + 1
+            if count > 0.3 * total_length:
+                ind_to_be_deleted.append(ind)
+
+    print('total', total_length)
+    print('saved', 0.3 * total_length)
+    print('to be del', len(ind_to_be_deleted))
+    for index in sorted(ind_to_be_deleted, reverse=True):
+        del samples[index]
+
+    print('after deleting', len(samples))
+    return samples
+
+def plot_data(samples):
+    angles = []
+    for line in samples:
+        angle = float(line[3])
+        angles.append(angle)
+
+    plt.hist(angles)
+    plt.title("Angles")
+    plt.xlabel("Angle")
+    plt.ylabel("Frequency")
+    plt.show()
 
 def generator(samples, batch_size=32):
     correction = 0.3
@@ -50,8 +82,8 @@ def generator(samples, batch_size=32):
                 print('Incorrect path', current_path)
             else:
                 measurement = float(line[3])
-                if limit_reached or abs(measurement) > 0.5:
-                    if abs(measurement) < 0.5:
+                if limit_reached or abs(measurement) > 0.85:
+                    if abs(measurement) < 0.85:
                         count = count+1
                     if count > 10:
                         limit_reached = False
@@ -89,7 +121,7 @@ from keras.models import load_model
 def create_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))
-    model.add(Cropping2D(cropping=((45,20), (0,0))))
+    model.add(Cropping2D(cropping=((70,25), (1,1))))
     model.add(Conv2D(24,5,5,subsample=(2,2),activation = "elu"))
     model.add(Conv2D(36,5,5,subsample=(2,2),activation="elu"))
     #model.add(Dropout(0.25))
@@ -133,5 +165,8 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-saved_model = load_trained_model(SAVED_MODEL_PATH)
-train_model(saved_model, NEW_MODEL_NAME)
+# saved_model = load_trained_model(SAVED_MODEL_PATH)
+# train_model(saved_model, NEW_MODEL_NAME)
+
+plot_data(samples)
+cull_data(samples)
