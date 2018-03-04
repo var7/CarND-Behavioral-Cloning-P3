@@ -2,9 +2,9 @@ import os
 import csv
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
-DATA_FOLDER = './other_track/'
-NEW_MODEL_NAME = 'nvidia_datamodelv4-othertrack'
-SAVED_MODEL_PATH = './models/nvidia_datamodel.h5'
+DATA_FOLDER = './bestdata/'
+NEW_MODEL_NAME = 'nvidia_datamodelv33'
+SAVED_MODEL_PATH = './nvidia_datamodelv32.h5'
 
 samples = []
 with open(DATA_FOLDER+'driving_log.csv') as csvfile:
@@ -27,8 +27,8 @@ def generator(samples, batch_size=32):
     correction = 0.3
     num_samples = len(samples)
     limit_reached = True
-    count  = 0
     while 1: # Loop forever so the generator never terminates
+        count  = 0
         sklearn.utils.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
             batch_samples = samples[offset:offset+batch_size]
@@ -50,10 +50,10 @@ def generator(samples, batch_size=32):
                 print('Incorrect path', current_path)
             else:
                 measurement = float(line[3])
-                if limit_reached or abs(measurement) > 0.2:
-                    if abs(measurement) < 0.2:
+                if limit_reached or abs(measurement) > 0.5:
+                    if abs(measurement) < 0.5:
                         count = count+1
-                    if count > 5000:
+                    if count > 10:
                         limit_reached = False
                     images.extend([image, left_image, right_image])
                     steering_left = measurement + correction
@@ -73,6 +73,7 @@ def generator(samples, batch_size=32):
 
             X_train = np.array(images)
             y_train = np.array(measurements)
+#            print('\ncount', count)
             yield sklearn.utils.shuffle(X_train, y_train)
 
 batch_size = 32
