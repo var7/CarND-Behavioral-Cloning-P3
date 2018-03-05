@@ -167,12 +167,13 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './all_new_data/'
+UDACITY_DATA_FOLDER = './data/'
 NEW_MODEL_NAME = 'nvidia_datamodelv02-allnewdata'
 SAVED_MODEL_PATH = './nvidia_datamodel.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
-all_samples = get_samples(DATA_FOLDER)
+udacity_samples = get_samples(DATA_FOLDER)
+my_samples = get_samples(MYDATA_FOLDER)
 #plot_data(all_samples, data_name='udacity_data', AWS=True)
 culled_samples = cull_data(all_samples, threshold = 0.3)
 #plot_data(culled_samples, data_name='udacity_data_culled', AWS=True)
@@ -191,3 +192,29 @@ model = load_trained_model(SAVED_MODEL_PATH)
 #model = create_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
     train_sample_len, valid_sample_len, epochs = 5)
+
+MY_DATA_FOLDER = './all_new_data/'
+NEW_MODEL_NAME = 'nvidia_datamodelv02-allnewdata'
+SAVED_MODEL_PATH = './nvidia_datamodel.h5'
+MY_IMGPATH = MY_DATA_FOLDER + 'IMG/'
+
+
+my_samples = get_samples(MY_DATA_FOLDER)
+#plot_data(all_samples, data_name='udacity_data', AWS=True)
+myculled_samples = cull_data(my_samples, threshold = 0.3)
+#plot_data(culled_samples, data_name='udacity_data_culled', AWS=True)
+
+mytrain_samples, myvalidation_samples = train_test_split(myculled_samples,test_size=0.2)
+mytrain_sample_len = 6*len(mytrain_samples)
+myvalid_sample_len = 6*len(myvalidation_samples)
+print('Total number of training samples:', mytrain_sample_len)
+print('Total number of validation samples:', myvalid_sample_len)
+batch_size = 32
+# compile and train the model using the generator function
+my_train_generator = generator(mytrain_samples, MY_IMGPATH, batch_size=batch_size)
+my_validation_generator = generator(myvalidation_samples, MY_IMGPATH, batch_size=batch_size)
+
+# model = load_trained_model(SAVED_MODEL_PATH)
+#model = create_model()
+train_model(model, NEW_MODEL_NAME, mytrain_generator, myvalidation_generator, \
+    mytrain_sample_len, myvalid_sample_len, epochs = 5)
