@@ -27,7 +27,7 @@ def cull_data(samples, threshold = 0.2):
         angle = float(line[3])
         if(abs(angle) <= threshold):
             count = count + 1
-            if count > 0.15 * total_length:
+            if count > 0.2 * total_length:
                 ind_to_be_deleted.append(ind)
 
     print('original number of samples:', total_length)
@@ -123,7 +123,7 @@ from keras.models import load_model
 def create_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))
-    model.add(Cropping2D(cropping=((70,25), (1,1))))
+    model.add(Cropping2D(cropping=((50,20), (0,0))))
     model.add(Conv2D(24,5,5,subsample=(2,2),activation = "elu"))
     model.add(Conv2D(36,5,5,subsample=(2,2),activation="elu"))
     #model.add(Dropout(0.25))
@@ -132,7 +132,7 @@ def create_model():
     model.add(Conv2D(64,3,3,activation="elu"))
     model.add(Flatten())
     model.add(Dense(100))
-    model.add(Dropout(0.50))
+#    model.add(Dropout(0.50))
     model.add(Dense(50))
     model.add(Dense(50))
     model.add(Dense(1))
@@ -167,8 +167,8 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './all_new_data/'
-NEW_MODEL_NAME = 'nvidiamodel_v01'
+DATA_FOLDER = './data/'
+NEW_MODEL_NAME = 'nvidiamodel_v02'
 SAVED_MODEL_PATH = './nvidiamodel_v0.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
@@ -191,23 +191,3 @@ validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_s
 model = create_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
     train_sample_len, valid_sample_len, epochs = 7)
-
-MY_DATA_FOLDER = './all_new_data'
-all_my_samples = get_samples(MY_DATA_FOLDER)
-#plot_data(all_samples, data_name='udacity_data', AWS=True)
-culled_my_samples = cull_data(all_my_samples, threshold = 0.3)
-#plot_data(culled_samples, data_name='udacity_data_culled', AWS=True)
-
-mytrain_samples, myvalidation_samples = train_test_split(culled_my_samples,test_size=0.2)
-mytrain_sample_len = 6*len(mytrain_samples)
-myvalid_sample_len = 6*len(myvalidation_samples)
-print('Total number of training samples:', mytrain_sample_len)
-print('Total number of validation samples:', myvalid_sample_len)
-batch_size = 64
-# compile and train the model using the generator function
-mytrain_generator = generator(mytrain_samples, IMGPATH, batch_size=batch_size)
-myvalidation_generator = generator(myvalidation_samples, IMGPATH, batch_size=batch_size)
-
-#model = load_trained_model(SAVED_MODEL_PATH)
-train_model(model, NEW_MODEL_NAME, mytrain_generator, myvalidation_generator, \
-    mytrain_sample_len, myvalid_sample_len, epochs = 7)
