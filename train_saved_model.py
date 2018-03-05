@@ -167,9 +167,9 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './data/'
-NEW_MODEL_NAME = 'nvidiamodel_v02'
-SAVED_MODEL_PATH = './nvidiamodel_v0.h5'
+DATA_FOLDER = './all_new_data/'
+NEW_MODEL_NAME = 'nvidia_datamodelv02-allnewdata'
+SAVED_MODEL_PATH = './nvidia_datamodel.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
@@ -182,12 +182,12 @@ train_sample_len = 6*len(train_samples)
 valid_sample_len = 6*len(validation_samples)
 print('Total number of training samples:', train_sample_len)
 print('Total number of validation samples:', valid_sample_len)
-batch_size = 64
+batch_size = 32
 # compile and train the model using the generator function
 train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
 validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
 
-#model = load_trained_model(SAVED_MODEL_PATH)
-model = create_model()
+model = load_trained_model(SAVED_MODEL_PATH)
+#model = create_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
-    train_sample_len, valid_sample_len, epochs = 7)
+    train_sample_len, valid_sample_len, epochs = 5)
