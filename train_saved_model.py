@@ -190,4 +190,24 @@ validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_s
 #model = load_trained_model(SAVED_MODEL_PATH)
 model = create_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
- train_sample_len, valid_sample_len, epochs = 7)
+    train_sample_len, valid_sample_len, epochs = 7)
+
+MY_DATA_FOLDER = './all_new_data'
+all_my_samples = get_samples(MY_DATA_FOLDER)
+#plot_data(all_samples, data_name='udacity_data', AWS=True)
+culled_my_samples = cull_data(all_my_samples, threshold = 0.3)
+#plot_data(culled_samples, data_name='udacity_data_culled', AWS=True)
+
+mytrain_samples, myvalidation_samples = train_test_split(culled_my_samples,test_size=0.2)
+mytrain_sample_len = 6*len(mytrain_samples)
+myvalid_sample_len = 6*len(myvalidation_samples)
+print('Total number of training samples:', mytrain_sample_len)
+print('Total number of validation samples:', myvalid_sample_len)
+batch_size = 64
+# compile and train the model using the generator function
+mytrain_generator = generator(mytrain_samples, IMGPATH, batch_size=batch_size)
+myvalidation_generator = generator(myvalidation_samples, IMGPATH, batch_size=batch_size)
+
+#model = load_trained_model(SAVED_MODEL_PATH)
+train_model(model, NEW_MODEL_NAME, mytrain_generator, myvalidation_generator, \
+    mytrain_sample_len, myvalid_sample_len, epochs = 7)
