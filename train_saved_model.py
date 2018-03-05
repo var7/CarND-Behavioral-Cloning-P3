@@ -2,29 +2,25 @@ import os
 import csv
 import matplotlib.pyplot as plt
 # plt.switch_backend('agg')
-DATA_FOLDER = './newdata/'
-NEW_MODEL_NAME = 'nvidia_datamodelv33'
-SAVED_MODEL_PATH = './nvidia_datamodelv32.h5'
-
-samples = []
-with open(DATA_FOLDER+'driving_log.csv') as csvfile:
-    reader = csv.reader(csvfile)
-    for line in reader:
-        samples.append(line)
 
 from sklearn.model_selection import train_test_split
-
 import cv2
 import numpy as np
 import sklearn
 
-IMGPATH = DATA_FOLDER + 'IMG/'
+def get_samples(DATA_FOLDER):
+    samples = []
+    with open(DATA_FOLDER+'driving_log.csv') as csvfile:
+        reader = csv.reader(csvfile)
+        for line in reader:
+            samples.append(line)
+    return samples
 
 def cull_data(samples, threshold = 0.2):
     ind_to_be_deleted = []
     total_length = len(samples)
     count = 0
-    
+
     for ind, line in enumerate(samples):
         if line[3] == 'steering':
             continue
@@ -34,32 +30,37 @@ def cull_data(samples, threshold = 0.2):
             if count > 0.2 * total_length:
                 ind_to_be_deleted.append(ind)
 
-    print('total', total_length)
-    print('count', count)
-    print('saved', 0.2 * total_length)
-    print('to be del', len(ind_to_be_deleted))
-    
+    print('original number of samples:', total_length)
+    print('total count of samples less than threshold {}:{}'.format \
+        (threshold, count))
+    print('number of samples less than threshold that are saved: ', \
+        0.2 * total_length)
+    print('Number of samples to be deleted:', len(ind_to_be_deleted))
+
     for index in sorted(ind_to_be_deleted, reverse=True):
         del samples[index]
 
-    print('samples size after deleting', len(samples))
+    print('Sample size after deleting:', len(samples))
     return samples
 
-def plot_data(samples):
+def plot_data(samples, data_name, AWS=False):
     angles = []
     for line in samples:
         if line[3] == 'steering':
             continue
-        angle = float(line[3])        
+        angle = float(line[3])
         angles.append(angle)
-
+    fig = plt.figure()
     plt.hist(angles)
     plt.title("Angles")
     plt.xlabel("Angle")
     plt.ylabel("Frequency")
-    plt.show()
+    if not(AWS):
+        plt.show()
+    else:
+        fig.savefig(data_name+'.png', bbox_inches='tight')
 
-def generator(samples, batch_size=32):
+def generator(samples, img_path, batch_size=32):
     correction = 0.3
     num_samples = len(samples)
     limit_reached = True
@@ -74,11 +75,11 @@ def generator(samples, batch_size=32):
         for line in batch_samples:
             source_path = line[0]
             filename = source_path.split('/')[-1]
-            current_path = IMGPATH + filename
+            current_path = img_path + filename
             left_filename = line[1].split('/')[-1]
-            left_path = IMGPATH + left_filename
+            left_path = img_path + left_filename
             right_filename = line[2].split('/')[-1]
-            right_path = IMGPATH + right_filename
+            right_path = img_path + right_filename
             image = cv2.imread(current_path)
             left_image = cv2.imread(left_path)
             right_image = cv2.imread(right_path)
@@ -86,25 +87,25 @@ def generator(samples, batch_size=32):
                 print('Incorrect path', current_path)
             else:
                 measurement = float(line[3])
-                if limit_reached or abs(measurement) > 0.85:
-                    if abs(measurement) < 0.85:
-                        count = count+1
-                    if count > 10:
-                        limit_reached = False
-                    images.extend([image, left_image, right_image])
-                    steering_left = measurement + correction
-                    steering_right = measurement - correction
-                    measurements.extend([measurement, steering_left, steering_right])
-                    left_image_flipped = np.fliplr(left_image)
-                    image_flipped = np.fliplr(image)
-                    right_image_flipped = np.fliplr(right_image)
-                    measurement_flipped = -measurement
-                    steering_left_flipped = -steering_left
-                    steering_right_flipped = -steering_right
-                    images.extend([image_flipped, left_image_flipped, \
-                        right_image_flipped])
-                    measurements.extend([measurement_flipped, steering_left_flipped, \
-                    steering_right_flipped])
+                # if limit_reached or abs(measurement) > 0.85:
+                #     if abs(measurement) < 0.85:
+                #         count = count+1
+                #     if count > 10:
+                #         limit_reached = False
+                images.extend([image, left_image, right_image])
+                steering_left = measurement + correction
+                steering_right = measurement - correction
+                measurements.extend([measurement, steering_left, steering_right])
+                left_image_flipped = np.fliplr(left_image)
+                image_flipped = np.fliplr(image)
+                right_image_flipped = np.fliplr(right_image)
+                measurement_flipped = -measurement
+                steering_left_flipped = -steering_left
+                steering_right_flipped = -steering_right
+                images.extend([image_flipped, left_image_flipped, \
+                    right_image_flipped])
+                measurements.extend([measurement_flipped, steering_left_flipped, \
+                steering_right_flipped])
         # trim image to only see section with road
 
             X_train = np.array(images)
@@ -166,15 +167,21 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-plot_data(samples)
-culled_samples = cull_data(samples, threshold = 0.3)
-plot_data(culled_samples)
+DATA_FOLDER = './data/'
+NEW_MODEL_NAME = 'nvidia_datamodelv33'
+SAVED_MODEL_PATH = './nvidia_datamodelv32.h5'
+IMGPATH = DATA_FOLDER + 'IMG/'
+
+all_samples = get_samples(DATA_FOLDER)
+plot_data(all_samples, data_name='udacity_data', AWS=True)
+culled_samples = cull_data(all_samples, threshold = 0.3)
+plot_data(culled_samples, data_name='udacity_data_culled', AWS=True)
 
 # train_samples, validation_samples = train_test_split(culled_samples,test_size=0.2)
-# batch_size = 32
+# batch_size = 64
 # # compile and train the model using the generator function
 # train_generator = generator(train_samples, batch_size=batch_size)
 # validation_generator = generator(validation_samples, batch_size=batch_size)
-
+#
 # saved_model = load_trained_model(SAVED_MODEL_PATH)
 # train_model(saved_model, NEW_MODEL_NAME)
