@@ -2,7 +2,7 @@ import os
 import csv
 import matplotlib.pyplot as plt
 # plt.switch_backend('agg')
-DATA_FOLDER = './dice_data/'
+DATA_FOLDER = './newdata/'
 NEW_MODEL_NAME = 'nvidia_datamodelv33'
 SAVED_MODEL_PATH = './nvidia_datamodelv32.h5'
 
@@ -13,9 +13,6 @@ with open(DATA_FOLDER+'driving_log.csv') as csvfile:
         samples.append(line)
 
 from sklearn.model_selection import train_test_split
-train_samples, validation_samples = train_test_split(samples, test_size=0.2)
-print(len(samples))
-print(len(train_samples))
 
 import cv2
 import numpy as np
@@ -27,26 +24,33 @@ def cull_data(samples, threshold = 0.2):
     ind_to_be_deleted = []
     total_length = len(samples)
     count = 0
+    
     for ind, line in enumerate(samples):
+        if line[3] == 'steering':
+            continue
         angle = float(line[3])
-        if(abs(angle <= threshold)):
+        if(abs(angle) <= threshold):
             count = count + 1
-            if count > 0.3 * total_length:
+            if count > 0.2 * total_length:
                 ind_to_be_deleted.append(ind)
 
     print('total', total_length)
-    print('saved', 0.3 * total_length)
+    print('count', count)
+    print('saved', 0.2 * total_length)
     print('to be del', len(ind_to_be_deleted))
+    
     for index in sorted(ind_to_be_deleted, reverse=True):
         del samples[index]
 
-    print('after deleting', len(samples))
+    print('samples size after deleting', len(samples))
     return samples
 
 def plot_data(samples):
     angles = []
     for line in samples:
-        angle = float(line[3])
+        if line[3] == 'steering':
+            continue
+        angle = float(line[3])        
         angles.append(angle)
 
     plt.hist(angles)
@@ -108,10 +112,7 @@ def generator(samples, batch_size=32):
 #            print('\ncount', count)
             yield sklearn.utils.shuffle(X_train, y_train)
 
-batch_size = 32
-# compile and train the model using the generator function
-train_generator = generator(train_samples, batch_size=batch_size)
-validation_generator = generator(validation_samples, batch_size=batch_size)
+
 
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Dropout
@@ -165,8 +166,15 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
+plot_data(samples)
+culled_samples = cull_data(samples, threshold = 0.3)
+plot_data(culled_samples)
+
+# train_samples, validation_samples = train_test_split(culled_samples,test_size=0.2)
+# batch_size = 32
+# # compile and train the model using the generator function
+# train_generator = generator(train_samples, batch_size=batch_size)
+# validation_generator = generator(validation_samples, batch_size=batch_size)
+
 # saved_model = load_trained_model(SAVED_MODEL_PATH)
 # train_model(saved_model, NEW_MODEL_NAME)
-
-plot_data(samples)
-cull_data(samples)
