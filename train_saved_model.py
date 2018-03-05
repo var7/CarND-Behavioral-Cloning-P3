@@ -1,7 +1,7 @@
 import os
 import csv
 import matplotlib.pyplot as plt
-# plt.switch_backend('agg')
+plt.switch_backend('agg')
 
 from sklearn.model_selection import train_test_split
 import cv2
@@ -27,7 +27,7 @@ def cull_data(samples, threshold = 0.2):
         angle = float(line[3])
         if(abs(angle) <= threshold):
             count = count + 1
-            if count > 0.2 * total_length:
+            if count > 0.15 * total_length:
                 ind_to_be_deleted.append(ind)
 
     print('original number of samples:', total_length)
@@ -61,7 +61,7 @@ def plot_data(samples, data_name, AWS=False):
         fig.savefig(data_name+'.png', bbox_inches='tight')
 
 def generator(samples, img_path, batch_size=32):
-    correction = 0.3
+    correction = 0.2
     num_samples = len(samples)
     limit_reached = True
     while 1: # Loop forever so the generator never terminates
@@ -132,21 +132,21 @@ def create_model():
     model.add(Conv2D(64,3,3,activation="elu"))
     model.add(Flatten())
     model.add(Dense(100))
-    #model.add(Dropout(0.50))
+    model.add(Dropout(0.50))
     model.add(Dense(50))
     model.add(Dense(50))
     model.add(Dense(1))
     return model
 
-def train_model(model, model_name):
-    model.compile(loss='mse', optimizer='adam')
-    samples =  3*len(train_samples)
-    history_object = model.fit_generator(train_generator, \
-                samples_per_epoch= (samples//batch_size)*batch_size, \
-                validation_data=validation_generator, \
-                nb_val_samples=(len(validation_samples)//batch_size)*batch_size, \
-                nb_epoch=3)
+def train_model(model, model_name, train_generator, validation_generator,\
+ train_sample_len, valid_sample_len, epochs=3):
 
+    model.compile(loss='mse', optimizer='adam')
+    history_object = model.fit_generator(train_generator, \
+                samples_per_epoch= (train_sample_len//batch_size)*batch_size, \
+                validation_data=validation_generator, \
+                nb_val_samples=(valid_sample_len//batch_size)*batch_size, \
+                nb_epoch=epochs)
     model.save(model_name+'.h5')
     print('saved model', model_name)
     return history_object
@@ -167,21 +167,27 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './data/'
-NEW_MODEL_NAME = 'nvidia_datamodelv33'
-SAVED_MODEL_PATH = './nvidia_datamodelv32.h5'
+DATA_FOLDER = './all_new_data/'
+NEW_MODEL_NAME = 'nvidiamodel_v01'
+SAVED_MODEL_PATH = './nvidiamodel_v0.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
-plot_data(all_samples, data_name='udacity_data', AWS=True)
+#plot_data(all_samples, data_name='udacity_data', AWS=True)
 culled_samples = cull_data(all_samples, threshold = 0.3)
-plot_data(culled_samples, data_name='udacity_data_culled', AWS=True)
+#plot_data(culled_samples, data_name='udacity_data_culled', AWS=True)
 
-# train_samples, validation_samples = train_test_split(culled_samples,test_size=0.2)
-# batch_size = 64
-# # compile and train the model using the generator function
-# train_generator = generator(train_samples, batch_size=batch_size)
-# validation_generator = generator(validation_samples, batch_size=batch_size)
-#
-# saved_model = load_trained_model(SAVED_MODEL_PATH)
-# train_model(saved_model, NEW_MODEL_NAME)
+train_samples, validation_samples = train_test_split(culled_samples,test_size=0.2)
+train_sample_len = 6*len(train_samples)
+valid_sample_len = 6*len(validation_samples)
+print('Total number of training samples:', train_sample_len)
+print('Total number of validation samples:', valid_sample_len)
+batch_size = 64
+# compile and train the model using the generator function
+train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
+validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
+
+#model = load_trained_model(SAVED_MODEL_PATH)
+model = create_model()
+train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
+ train_sample_len, valid_sample_len, epochs = 7)
