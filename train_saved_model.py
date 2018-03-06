@@ -97,15 +97,17 @@ def generator(samples, img_path, batch_size=32):
                 steering_left = measurement + correction
                 steering_right = measurement - correction
                 measurements.extend([measurement, steering_left, steering_right])
-                left_image_flipped = np.fliplr(left_image)
-                image_flipped = np.fliplr(image)
-                right_image_flipped = np.fliplr(right_image)
-                measurement_flipped = -measurement
-                steering_left_flipped = -steering_left
-                steering_right_flipped = -steering_right
-                images.extend([image_flipped, left_image_flipped, \
-                    right_image_flipped])
-                measurements.extend([measurement_flipped, steering_left_flipped, \
+                flip_prob = random.random()
+                if flip_prob > 0.5:
+                    left_image_flipped = np.fliplr(left_image)
+                    image_flipped = np.fliplr(image)
+                    right_image_flipped = np.fliplr(right_image)
+                    measurement_flipped = -measurement
+                    steering_left_flipped = -steering_left
+                    steering_right_flipped = -steering_right
+                    images.extend([image_flipped, left_image_flipped, \
+                        right_image_flipped])
+                    measurements.extend([measurement_flipped, steering_left_flipped, \
                 steering_right_flipped])
         # trim image to only see section with road
 
