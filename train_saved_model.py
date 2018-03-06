@@ -2,6 +2,7 @@ import os
 import csv
 import matplotlib.pyplot as plt
 plt.switch_backend('agg')
+import random
 
 from sklearn.model_selection import train_test_split
 import cv2
@@ -27,7 +28,7 @@ def cull_data(samples, threshold = 0.2):
         angle = float(line[3])
         if(abs(angle) <= threshold):
             count = count + 1
-            if count > 0.2 * total_length:
+            if random.random() > 0.3:
                 ind_to_be_deleted.append(ind)
 
     print('original number of samples:', total_length)
@@ -51,7 +52,7 @@ def plot_data(samples, data_name, AWS=False):
         angle = float(line[3])
         angles.append(angle)
     fig = plt.figure()
-    plt.hist(angles)
+    plt.hist(angles, bins='auto')
     plt.title("Angles")
     plt.xlabel("Angle")
     plt.ylabel("Frequency")
@@ -61,7 +62,7 @@ def plot_data(samples, data_name, AWS=False):
         fig.savefig(data_name+'.png', bbox_inches='tight')
 
 def generator(samples, img_path, batch_size=32):
-    correction = 0.2
+    correction = 0.25
     num_samples = len(samples)
     limit_reached = True
     while 1: # Loop forever so the generator never terminates
@@ -167,16 +168,15 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-UDACITY_DATA_FOLDER = './data/'
+DATA_FOLDER = './shiny-data/'
 NEW_MODEL_NAME = 'nvidia_datamodelv1-udacity-all-new'
 SAVED_MODEL_PATH = './nvidia_datamodel.h5'
-IMGPATH = UDACITY_DATA_FOLDER + 'IMG/'
+IMGPATH = DATA_FOLDER + 'IMG/'
 
-udacity_samples = get_samples(UDACITY_DATA_FOLDER)
-#my_samples = get_samples(MYDATA_FOLDER)
-#plot_data(all_samples, data_name='udacity_data', AWS=True)
-culled_samples = cull_data(udacity_samples, threshold = 0.3)
-#plot_data(culled_samples, data_name='udacity_data_culled', AWS=True)
+all_samples = get_samples(DATA_FOLDER)
+plot_data(all_samples, data_name='shiny_data', AWS=True)
+culled_samples = cull_data(all_samples, threshold = 0.5)
+plot_data(culled_samples, data_name='shiny_data_culled', AWS=True)
 
 train_samples, validation_samples = train_test_split(culled_samples,test_size=0.2)
 train_sample_len = 6*len(train_samples)
@@ -188,33 +188,7 @@ batch_size = 32
 train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
 validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
 
-#model = load_trained_model(SAVED_MODEL_PATH)
-model = create_model()
-train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
-    train_sample_len, valid_sample_len, epochs = 3)
-
-MY_DATA_FOLDER = './all_new_data/'
-#NEW_MODEL_NAME = 'nvidia_datamodelv02-allnewdata'
-#SAVED_MODEL_PATH = './nvidia_datamodel.h5'
-MY_IMGPATH = MY_DATA_FOLDER + 'IMG/'
-
-
-my_samples = get_samples(MY_DATA_FOLDER)
-#plot_data(all_samples, data_name='udacity_data', AWS=True)
-myculled_samples = cull_data(my_samples, threshold = 0.3)
-#plot_data(culled_samples, data_name='udacity_data_culled', AWS=True)
-
-mytrain_samples, myvalidation_samples = train_test_split(myculled_samples,test_size=0.2)
-mytrain_sample_len = 6*len(mytrain_samples)
-myvalid_sample_len = 6*len(myvalidation_samples)
-print('Total number of training samples:', mytrain_sample_len)
-print('Total number of validation samples:', myvalid_sample_len)
-batch_size = 32
-# compile and train the model using the generator function
-my_train_generator = generator(mytrain_samples, MY_IMGPATH, batch_size=batch_size)
-my_validation_generator = generator(myvalidation_samples, MY_IMGPATH, batch_size=batch_size)
-
 # model = load_trained_model(SAVED_MODEL_PATH)
-#model = create_model()
-train_model(model, NEW_MODEL_NAME, my_train_generator, my_validation_generator, \
-    mytrain_sample_len, myvalid_sample_len, epochs = 3)
+# # model = create_model()
+# train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
+#     train_sample_len, valid_sample_len, epochs = 3)
