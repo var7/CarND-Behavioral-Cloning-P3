@@ -62,7 +62,7 @@ def plot_data(samples, data_name, AWS=False):
         fig.savefig(data_name+'.png', bbox_inches='tight')
 
 def generator(samples, img_path, batch_size=32):
-    correction = 0.25
+    correction = 0.35
     num_samples = len(samples)
     limit_reached = True
     while 1: # Loop forever so the generator never terminates
@@ -84,6 +84,12 @@ def generator(samples, img_path, batch_size=32):
             image = cv2.imread(current_path)
             left_image = cv2.imread(left_path)
             right_image = cv2.imread(right_path)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            left_image = cv2.cvtColor(left_image, cv2.COLOR_BGR2RGB)
+            right_image = cv2.cvtColor(right_image, cv2.COLOR_BGR2RGB)
+            image = np.asarray(image)
+            right_image = np.asarray(right_image)
+            left_image = np.asarray(left_image)
             if image is None:
                 print('Incorrect path', current_path)
             else:
@@ -123,7 +129,7 @@ from keras.layers import Flatten, Dense, Lambda, Dropout
 from keras.layers import Conv2D, MaxPooling2D, Cropping2D
 from keras.models import load_model
 
-def create_model():
+def create_nvidia_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))
     model.add(Cropping2D(cropping=((50,20), (0,0))))
@@ -139,6 +145,21 @@ def create_model():
     model.add(Dense(50))
     model.add(Dense(50))
     model.add(Dense(1))
+    return model
+
+def create_simple_model():
+    model = Sequential()
+    model.add(Lambda(lambda x: x/255.0 -0.5, input_shape=(160,320,3)))
+    model.add(Cropping2D(cropping=((70, 25),(0,0))))
+
+    model.add(Conv2D(24, 5, 5, subsample=(2,2), activation='elu'))
+    model.add(Flatten() )
+    model.add(Dense(100) )
+    model.add(Dropout(0.2) )
+    model.add(Dense(50) )
+    model.add(Dropout(0.2) )
+    model.add(Dense(10) )
+    model.add(Dense(1) )
     return model
 
 def train_model(model, model_name, train_generator, validation_generator,\
@@ -171,14 +192,14 @@ def training_plots(history_object, model_name):
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
 DATA_FOLDER = './shiny-data/'
-NEW_MODEL_NAME = 'nvidia_datamodelv1-udacity-all-new'
-SAVED_MODEL_PATH = './nvidia_datamodel.h5'
+NEW_MODEL_NAME = 'simple-model-v1'
+SAVED_MODEL_PATH = './simple-model-v0.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
-plot_data(all_samples, data_name='shiny_data', AWS=True)
-culled_samples = cull_data(all_samples, threshold = 0.5)
-plot_data(culled_samples, data_name='shiny_data_culled', AWS=True)
+#plot_data(all_samples, data_name='shiny_data', AWS=True)
+culled_samples = cull_data(all_samples, threshold = 0.85)
+#plot_data(culled_samples, data_name='shiny_data_culled', AWS=True)
 
 train_samples, validation_samples = train_test_split(culled_samples,test_size=0.2)
 train_sample_len = 6*len(train_samples)
@@ -190,7 +211,7 @@ batch_size = 32
 train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
 validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
 
-# model = load_trained_model(SAVED_MODEL_PATH)
-# # model = create_model()
-# train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
-#     train_sample_len, valid_sample_len, epochs = 3)
+model = load_trained_model(SAVED_MODEL_PATH)
+#model = create_simple_model()
+train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
+     train_sample_len, valid_sample_len, epochs = 5)
