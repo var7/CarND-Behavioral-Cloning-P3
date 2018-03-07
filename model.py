@@ -120,15 +120,9 @@ def generator(samples, img_path, batch_size=32):
 
                 augment_prob = random.random()
                 if augment_prob > 0.5:
- #                    image_aug = change_brightness(image)
-  #                   images.append(image_aug)
-     #                measurements.append(measurement)
-#                else:
                     image_aug, measurement_aug = translate_shift(image, measurement)
                     images.append(image_aug)
                     measurements.append(measurement_aug)
-#            images.append(image)
- #           measurements.append(measurement)
 
             X_train = np.array(images)
             y_train = np.array(measurements)
@@ -173,6 +167,45 @@ def create_simple_model():
     model.add(Dense(1) )
     return model
 
+def create_simpler_model():
+    model = Sequential()
+    # model.add(Lambda(preprocess_batch, input_shape=(160, 320, 3), output_shape=(64, 64, 3)))
+    model.add(Lambda(lambda x: x/255.0 -0.5, input_shape=(160,320,3)))
+    model.add(Conv2D(3, 1, 1, border_mode='same', name='color_conv'))
+    # layer 1 output shape is 32x32x32
+    model.add(Convolution2D(32, 5, 5, input_shape=(64, 64, 3), subsample=(2, 2), border_mode="same"))
+    model.add(ELU())
+
+    # layer 2 output shape is 15x15x16
+    model.add(Convolution2D(16, 3, 3, subsample=(1, 1), border_mode="valid"))
+    model.add(ELU())
+    model.add(Dropout(.4))
+    model.add(MaxPooling2D((2, 2), border_mode='valid'))
+
+    # layer 3 output shape is 12x12x16
+    model.add(Convolution2D(16, 3, 3, subsample=(1, 1), border_mode="valid"))
+    model.add(ELU())
+    model.add(Dropout(.4))
+
+    # Flatten the output
+    model.add(Flatten())
+
+    # layer 4
+    model.add(Dense(1024))
+    model.add(Dropout(.3))
+    model.add(ELU())
+
+    # layer 5
+    model.add(Dense(512))
+    model.add(ELU())
+
+    # Finally a single output, since this is a regression problem
+    model.add(Dense(1))
+
+    model.compile(optimizer="adam", loss="mse")
+
+    return model
+
 def train_model(model, model_name, train_generator, validation_generator,\
  train_sample_len, valid_sample_len, epochs=3):
 
@@ -201,7 +234,7 @@ def training_plots(history_object, model_name):
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
 DATA_FOLDER = './data/'
-NEW_MODEL_NAME = 'simple-model-v1'
+NEW_MODEL_NAME = 'simpler-model-v0'
 SAVED_MODEL_PATH = './simple-model-v0.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
@@ -211,7 +244,7 @@ plot_data(all_samples, NEW_MODEL_NAME+'before', AWS=True)
 #plot_data(culled_samples, NEW_MODEL_NAME+'after', AWS=True)
 
 train_samples, validation_samples = train_test_split(all_samples,test_size=0.20)
-batch_size = 64
+batch_size = 32
 train_sample_len = (len(train_samples) // batch_size)*batch_size
 valid_sample_len = (len(validation_samples)//batch_size)*batch_size
 print('Total number of training samples:', len(train_samples))
@@ -220,7 +253,9 @@ print('Total number of validation samples:', len(validation_samples))
 train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
 validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
 
+samples_per_epoch = (20000//BATCH_SIZE)*BATCH_SIZE
+
 #model = load_trained_model(SAVED_MODEL_PATH)
-model = create_simple_model()
+model = create_simpler_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
-     train_sample_len, valid_sample_len, epochs = 6)
+     samples_per_epoch, nb_val_samples=3000, epochs = 3)
