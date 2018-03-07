@@ -28,7 +28,7 @@ def cull_data(samples, threshold = 0.2):
         angle = float(line[3])
         if(abs(angle) <= threshold):
             count = count + 1
-            if random.random() > 0.5:
+            if random.random() > 0.2:
                 ind_to_be_deleted.append(ind)
 
     print('original number of samples:', total_length)
@@ -52,7 +52,7 @@ def plot_data(samples, data_name, AWS=False):
         angle = float(line[3])
         angles.append(angle)
     fig = plt.figure()
-    plt.hist(angles, bins='auto')
+    plt.hist(angles, bins=21)
     plt.title("Angles")
     plt.xlabel("Angle")
     plt.ylabel("Frequency")
@@ -61,7 +61,7 @@ def plot_data(samples, data_name, AWS=False):
     else:
         fig.savefig(data_name+'.png', bbox_inches='tight')
 
-def change_brightness(img, BRIGHTNESS_RANGE=5):
+def change_brightness(img, BRIGHTNESS_RANGE=0.25):
     temp = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # Compute a random brightness value and apply to the image
     brightness = BRIGHTNESS_RANGE + np.random.uniform()
@@ -69,7 +69,7 @@ def change_brightness(img, BRIGHTNESS_RANGE=5):
     # Convert back to RGB and return
     return cv2.cvtColor(temp, cv2.COLOR_HSV2RGB)
 
-def translate_shift(img, TRANS_X_RANGE=3, TRANS_Y_RANGE=3):
+def translate_shift(img, angle, TRANS_X_RANGE=100, TRANS_Y_RANGE=40, TRANS_ANGLE=0.3):
     # Compute X translation
     x_translation = (TRANS_X_RANGE * np.random.uniform()) - (TRANS_X_RANGE / 2)
     new_angle = angle + ((x_translation / TRANS_X_RANGE) * 2) * TRANS_ANGLE
@@ -78,10 +78,10 @@ def translate_shift(img, TRANS_X_RANGE=3, TRANS_Y_RANGE=3):
     # Form the translation matrix
     translation_matrix = np.float32([[1, 0, x_translation], [0, 1, y_translation]])
     # Translate the image
-    return cv2.warpAffine(img, translation_matrix, (img.shape[1], img.shape[0]))
+    return [cv2.warpAffine(img, translation_matrix, (img.shape[1], img.shape[0])), new_angle]
 
 def generator(samples, img_path, batch_size=32):
-    correction = 0.35
+    correction = 0.25
     num_samples = len(samples)
     limit_reached = True
     while 1: # Loop forever so the generator never terminates
@@ -114,19 +114,21 @@ def generator(samples, img_path, batch_size=32):
                 flip_prob = random.random()
                 if flip_prob > 0.5:
                     image_flipped = np.fliplr(image)
-                    measurement_flipped = -measurement
+                    measurement = -measurement
                     images.append(image_flipped)
                     measurements.append(measurement_flipped)
 
                 augment_prob = random.random()
                 if augment_prob > 0.5:
-                    image_aug = change_brightness(image)
+ #                    image_aug = change_brightness(image)
+  #                   images.append(image_aug)
+     #                measurements.append(measurement)
+#                else:
+                    image_aug, measurement_aug = translate_shift(image, measurement)
                     images.append(image_aug)
-                    measurements.append(measurement)
-                else:
-                    image_aug = translate_shift(image)
-                    images.append(image_aug)
-                    measurements.append(measurement)
+                    measurements.append(measurement_aug)
+#            images.append(image)
+ #           measurements.append(measurement)
 
             X_train = np.array(images)
             y_train = np.array(measurements)
@@ -140,7 +142,7 @@ from keras.models import load_model
 def create_nvidia_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))
-    model.add(Convolution2D(3, 1, 1, border_mode='same', name='color_conv'))
+    model.add(Conv2D(3, 1, 1, border_mode='same', name='color_conv'))
     model.add(Cropping2D(cropping=((50,20), (0,0))))
     model.add(Conv2D(24,5,5,subsample=(2,2),activation = "elu"))
     model.add(Conv2D(36,5,5,subsample=(2,2),activation="elu"))
@@ -159,7 +161,7 @@ def create_nvidia_model():
 def create_simple_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 -0.5, input_shape=(160,320,3)))
-    model.add(Convolution2D(3, 1, 1, border_mode='same', name='color_conv'))
+    model.add(Conv2D(3, 1, 1, border_mode='same', name='color_conv'))
     model.add(Cropping2D(cropping=((70, 25),(0,0))))
     model.add(Conv2D(24, 5, 5, subsample=(2,2), activation='elu'))
     model.add(Flatten() )
@@ -199,26 +201,26 @@ def training_plots(history_object, model_name):
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
 DATA_FOLDER = './data/'
-NEW_MODEL_NAME = 'simple-model-v0'
+NEW_MODEL_NAME = 'simple-model-v1'
 SAVED_MODEL_PATH = './simple-model-v0.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
-#plot_data(all_samples, data_name='shiny_data', AWS=True)
-culled_samples = cull_data(all_samples, threshold = 0.2)
-#plot_data(culled_samples, data_name='shiny_data_culled', AWS=True)
+plot_data(all_samples, NEW_MODEL_NAME+'before', AWS=True)
+#culled_samples = cull_data(all_samples, threshold = 0.5)
+#plot_data(culled_samples, NEW_MODEL_NAME+'after', AWS=True)
 
-train_samples, validation_samples = train_test_split(culled_samples,test_size=0.2)
-train_sample_len = 3*len(train_samples)
-valid_sample_len = 3*len(validation_samples)
-print('Total number of training samples:', train_sample_len)
-print('Total number of validation samples:', valid_sample_len)
-batch_size = 32
+train_samples, validation_samples = train_test_split(all_samples,test_size=0.20)
+batch_size = 64
+train_sample_len = (len(train_samples) // batch_size)*batch_size
+valid_sample_len = (len(validation_samples)//batch_size)*batch_size
+print('Total number of training samples:', len(train_samples))
+print('Total number of validation samples:', len(validation_samples))
 # compile and train the model using the generator function
 train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
 validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
 
-# model = load_trained_model(SAVED_MODEL_PATH)
+#model = load_trained_model(SAVED_MODEL_PATH)
 model = create_simple_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
-     train_sample_len, valid_sample_len, epochs = 3)
+     train_sample_len, valid_sample_len, epochs = 6)
