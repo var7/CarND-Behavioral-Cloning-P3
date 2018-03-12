@@ -182,10 +182,11 @@ def full_generator(samples, img_path, batch_size=32):
                         right_image_flipped])
                     measurements.extend([measurement_flipped, steering_left_flipped, \
                     steering_right_flipped])
-                if len(images) == batch_size:
-                    X_train = np.array(images)
-                    y_train = np.array(measurements)
-                    yield sklearn.utils.shuffle(X_train, y_train)
+                if len(images) >= batch_size:
+                    break
+            X_train = np.array(images)
+            y_train = np.array(measurements)
+            yield sklearn.utils.shuffle(X_train, y_train)
 
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Dropout, ELU
@@ -287,8 +288,8 @@ def training_plots(history_object, model_name):
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
 DATA_FOLDER = './old_data/'
-NEW_MODEL_NAME = 'forum-model-v0-ud'
-SAVED_MODEL_PATH = './forum-model-v0-ud.h5'
+NEW_MODEL_NAME = 'model-v12'
+SAVED_MODEL_PATH = './model-v5.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
@@ -298,23 +299,18 @@ all_samples = get_samples(DATA_FOLDER)
 
 train_samples, validation_samples = train_test_split(all_samples, test_size=0.15)
 batch_size = 32
-train_sample_len = (len(train_samples) // batch_size)*batch_size
+train_sample_len = ( 40000 // batch_size)*batch_size
 valid_sample_len = (len(validation_samples)//batch_size)*batch_size
 print('Total number of training samples:', len(train_samples))
 print('Total number of validation samples:', len(validation_samples))
 # compile and train the model using the generator function
-train_generator = full_generator(train_samples, IMGPATH, batch_size=batch_size)
+train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
 validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
-X_train, y_train = next(train_generator)
-print('length', len(X_train))
-samples_per_epoch = ((len(train_samples))//batch_size)*batch_size
-X_train, y_train = next(train_generator)
-print('length', len(X_train))
 samples_per_epoch = ((len(train_samples))//batch_size)*batch_size
 print(samples_per_epoch)
 print(batch_size)
 print((len(train_samples))//batch_size)
-# model = load_trained_model(SAVED_MODEL_PATH)
-model = create_nvidia_model()
+model = load_trained_model(SAVED_MODEL_PATH)
+#model = create_nvidia_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
-     samples_per_epoch, valid_sample_len, epochs = 3)
+     train_sample_len, valid_sample_len, epochs = 2)
