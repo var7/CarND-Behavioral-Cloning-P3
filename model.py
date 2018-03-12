@@ -132,6 +132,65 @@ def generator(samples, img_path, batch_size=32):
             y_train = np.array(measurements)
             yield sklearn.utils.shuffle(X_train, y_train)
 
+def full_generator(samples, img_path, batch_size=32):
+    correction = 0.25
+    num_samples = len(samples)
+    limit_reached = True
+    while 1: # Loop forever so the generator never terminates
+        count  = 0
+        sklearn.utils.shuffle(samples)
+        for offset in range(0, num_samples, batch_size):
+            batch_samples = samples[offset:offset+batch_size]
+
+            images = []
+            measurements = []
+        for line in batch_samples:
+            source_path = line[0]
+            filename = source_path.split('/')[-1]
+            current_path = img_path + filename
+            left_filename = line[1].split('/')[-1]
+            left_path = img_path + left_filename
+            right_filename = line[2].split('/')[-1]
+            right_path = img_path + right_filename
+            image = cv2.imread(current_path)
+            left_image = cv2.imread(left_path)
+            right_image = cv2.imread(right_path)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            left_image = cv2.cvtColor(left_image, cv2.COLOR_BGR2RGB)
+            right_image = cv2.cvtColor(right_image, cv2.COLOR_BGR2RGB)
+            image = np.asarray(image)
+            right_image = np.asarray(right_image)
+            left_image = np.asarray(left_image)
+            if image is None:
+                print('Incorrect path', current_path)
+            else:
+                measurement = float(line[3])
+                images.extend([image, left_image, right_image])
+                steering_left = measurement + correction
+                steering_right = measurement - correction
+                measurements.extend([measurement, steering_left, steering_right])
+                flip_prob = random.random()
+                if flip_prob > 0.5:
+                    left_image_flipped = np.fliplr(left_image)
+                    image_flipped = np.fliplr(image)
+                    right_image_flipped = np.fliplr(right_image)
+                    measurement_flipped = -measurement
+                    steering_left_flipped = -steering_left
+                    steering_right_flipped = -steering_right
+                    images.extend([image_flipped, left_image_flipped, \
+                        right_image_flipped])
+                    measurements.extend([measurement_flipped, steering_left_flipped, \
+                steering_right_flipped])
+
+            if len(images) == batch_size:
+                print('breaking')
+                break
+
+            X_train = np.array(images)
+            y_train = np.array(measurements)
+            print(X_train.shape)
+            yield sklearn.utils.shuffle(X_train, y_train)
+
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Dropout, ELU
 from keras.layers import Conv2D, MaxPooling2D, Cropping2D, Convolution2D
@@ -231,32 +290,31 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './forumdata/track1_test/'
-NEW_MODEL_NAME = 'forum-model-t1-test-v6'
-SAVED_MODEL_PATH = './forum-model-t1-recovery-reverse-v5.h5'
+DATA_FOLDER = './data/'
+NEW_MODEL_NAME = 'forum-model-v0'
+SAVED_MODEL_PATH = './forum-model-v0.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
 #plot_data(all_samples, NEW_MODEL_NAME+'before', AWS=True)
-#culled_samples = cull_data(all_samples, threshold = 0.5)
+culled_samples = cull_data(all_samples, threshold = 0.5)
 #plot_data(culled_samples, NEW_MODEL_NAME+'after', AWS=True)
 
-train_samples, validation_samples = train_test_split(all_samples,test_size=0.20)
+train_samples, validation_samples = train_test_split(culled_samples, test_size=0.15)
 batch_size = 32
 train_sample_len = (len(train_samples) // batch_size)*batch_size
 valid_sample_len = (len(validation_samples)//batch_size)*batch_size
 print('Total number of training samples:', len(train_samples))
 print('Total number of validation samples:', len(validation_samples))
 # compile and train the model using the generator function
-train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
-validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
+train_generator = full_generator(train_samples, IMGPATH, batch_size=batch_size)
+validation_generator = full_generator(validation_samples, IMGPATH, batch_size=batch_size)
 
-samples_per_epoch = ((train_sample_len * 3)//batch_size)*batch_size
+samples_per_epoch = ((train_sample_len * 6)//batch_size)*batch_size
 print(samples_per_epoch)
 print(batch_size)
-print(20000//batch_size)
-print(20000//batch_size * batch_size)
-model = load_trained_model(SAVED_MODEL_PATH)
-#model = create_nvidia_model()
+print((train_sample_len * 6)//batch_size)
+# model = load_trained_model(SAVED_MODEL_PATH)
+model = create_nvidia_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
-     samples_per_epoch, 3000, epochs = 2)
+     samples_per_epoch, valid_sample_len, epochs = 3)
