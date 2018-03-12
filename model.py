@@ -156,17 +156,17 @@ def full_generator(samples, img_path, batch_size=32):
                 right_filename = line[2].split('/')[-1]
                 right_path = img_path + right_filename
                 image = cv2.imread(current_path)
-                left_image = cv2.imread(left_path)
-                right_image = cv2.imread(right_path)
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                left_image = cv2.cvtColor(left_image, cv2.COLOR_BGR2RGB)
-                right_image = cv2.cvtColor(right_image, cv2.COLOR_BGR2RGB)
-                image = np.asarray(image)
-                right_image = np.asarray(right_image)
-                left_image = np.asarray(left_image)
                 if image is None:
                     print('Incorrect path', current_path)
                 else:
+                    left_image = cv2.imread(left_path)
+                    right_image = cv2.imread(right_path)
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    left_image = cv2.cvtColor(left_image, cv2.COLOR_BGR2RGB)
+                    right_image = cv2.cvtColor(right_image, cv2.COLOR_BGR2RGB)
+                    image = np.asarray(image)
+                    right_image = np.asarray(right_image)
+                    left_image = np.asarray(left_image)
                     measurement = float(line[3])
                     images.extend([image, left_image, right_image])
                     steering_left = measurement + correction
