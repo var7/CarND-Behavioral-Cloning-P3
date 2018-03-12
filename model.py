@@ -85,7 +85,6 @@ def generator(samples, img_path, batch_size=32):
     num_samples = len(samples)
     limit_reached = True
     while 1: # Loop forever so the generator never terminates
-        count  = 0
         sklearn.utils.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
             batch_samples = samples[offset:offset+batch_size]
@@ -111,6 +110,8 @@ def generator(samples, img_path, batch_size=32):
                     images.append(image)
                     measurements.append(measurement)
                     count += 1
+                    if count >= batch_size:
+                        break
                     flip_prob = random.random()
                     if flip_prob > 0.5:
                         image_flipped = np.fliplr(image)
@@ -118,15 +119,16 @@ def generator(samples, img_path, batch_size=32):
                         images.append(image_flipped)
                         measurements.append(measurement_flipped)
                         count += 1
-
+                        if count >= batch_size:
+                            break
                     augment_prob = random.random()
                     if augment_prob > 0.5:
                         image_aug, measurement_aug = translate_shift(image, measurement)
                         images.append(image_aug)
                         measurements.append(measurement_aug)
                         count += 1
-                    if count == batch_size:
-                        break
+                        if count >= batch_size:
+                            break
 
             X_train = np.array(images)
             y_train = np.array(measurements)
@@ -142,7 +144,7 @@ def full_generator(samples, img_path, batch_size=32):
         sklearn.utils.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
             batch_samples = samples[offset:offset+batch_size]
-            print(len(batch_samples))
+            #print(len(batch_samples))
             images = []
             measurements = []
             for line in batch_samples:
@@ -180,14 +182,10 @@ def full_generator(samples, img_path, batch_size=32):
                         right_image_flipped])
                     measurements.extend([measurement_flipped, steering_left_flipped, \
                     steering_right_flipped])
-
                 if len(images) == batch_size:
-                    print('breaking')
-                    break
-
-            X_train = np.array(images)
-            y_train = np.array(measurements)
-            yield sklearn.utils.shuffle(X_train, y_train)
+                    X_train = np.array(images)
+                    y_train = np.array(measurements)
+                    yield sklearn.utils.shuffle(X_train, y_train)
 
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Dropout, ELU
@@ -288,17 +286,17 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './forumdata/track1_central/'
-NEW_MODEL_NAME = 'forum-model-v0'
-SAVED_MODEL_PATH = './forum-model-v0.h5'
+DATA_FOLDER = './old_data/'
+NEW_MODEL_NAME = 'forum-model-v0-ud'
+SAVED_MODEL_PATH = './forum-model-v0-ud.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
 #plot_data(all_samples, NEW_MODEL_NAME+'before', AWS=True)
-culled_samples = cull_data(all_samples, threshold = 0.5)
+#culled_samples = cull_data(all_samples, threshold = 0.3)
 #plot_data(culled_samples, NEW_MODEL_NAME+'after', AWS=True)
 
-train_samples, validation_samples = train_test_split(culled_samples, test_size=0.15)
+train_samples, validation_samples = train_test_split(all_samples, test_size=0.15)
 batch_size = 32
 train_sample_len = (len(train_samples) // batch_size)*batch_size
 valid_sample_len = (len(validation_samples)//batch_size)*batch_size
@@ -306,12 +304,16 @@ print('Total number of training samples:', len(train_samples))
 print('Total number of validation samples:', len(validation_samples))
 # compile and train the model using the generator function
 train_generator = full_generator(train_samples, IMGPATH, batch_size=batch_size)
-validation_generator = full_generator(validation_samples, IMGPATH, batch_size=batch_size)
-
-samples_per_epoch = ((train_sample_len * 6)//batch_size)*batch_size
+validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
+X_train, y_train = next(train_generator)
+print('length', len(X_train))
+samples_per_epoch = ((len(train_samples))//batch_size)*batch_size
+X_train, y_train = next(train_generator)
+print('length', len(X_train))
+samples_per_epoch = ((len(train_samples))//batch_size)*batch_size
 print(samples_per_epoch)
 print(batch_size)
-print((train_sample_len * 6)//batch_size)
+print((len(train_samples))//batch_size)
 # model = load_trained_model(SAVED_MODEL_PATH)
 model = create_nvidia_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
