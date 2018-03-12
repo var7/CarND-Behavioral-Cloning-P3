@@ -139,7 +139,7 @@ def full_generator(samples, img_path, batch_size=32):
     while 1: # Loop forever so the generator never terminates
         count  = 0
         sklearn.utils.shuffle(samples)
-        for offset in range(0, num_samples, batch_size):
+        for offset in range(0, num_samples, 6*batch_size):
             batch_samples = samples[offset:offset+batch_size]
 
             images = []
@@ -169,17 +169,15 @@ def full_generator(samples, img_path, batch_size=32):
                 steering_left = measurement + correction
                 steering_right = measurement - correction
                 measurements.extend([measurement, steering_left, steering_right])
-                flip_prob = random.random()
-                if flip_prob > 0.5:
-                    left_image_flipped = np.fliplr(left_image)
-                    image_flipped = np.fliplr(image)
-                    right_image_flipped = np.fliplr(right_image)
-                    measurement_flipped = -measurement
-                    steering_left_flipped = -steering_left
-                    steering_right_flipped = -steering_right
-                    images.extend([image_flipped, left_image_flipped, \
+                left_image_flipped = np.fliplr(left_image)
+                image_flipped = np.fliplr(image)
+                right_image_flipped = np.fliplr(right_image)
+                measurement_flipped = -measurement
+                steering_left_flipped = -steering_left
+                steering_right_flipped = -steering_right
+                images.extend([image_flipped, left_image_flipped, \
                         right_image_flipped])
-                    measurements.extend([measurement_flipped, steering_left_flipped, \
+                measurements.extend([measurement_flipped, steering_left_flipped, \
                 steering_right_flipped])
 
             if len(images) == batch_size:
@@ -188,7 +186,7 @@ def full_generator(samples, img_path, batch_size=32):
 
             X_train = np.array(images)
             y_train = np.array(measurements)
-            print(X_train.shape)
+            #print(X_train.shape)
             yield sklearn.utils.shuffle(X_train, y_train)
 
 from keras.models import Sequential
@@ -290,9 +288,9 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './data/'
-NEW_MODEL_NAME = 'forum-model-v0'
-SAVED_MODEL_PATH = './forum-model-v0.h5'
+DATA_FOLDER = './old_data/'
+NEW_MODEL_NAME = 'forum-model-ud-v0'
+SAVED_MODEL_PATH = './forum-model-ud-v0.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
