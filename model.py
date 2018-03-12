@@ -287,9 +287,9 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './old_data/'
-NEW_MODEL_NAME = 'model-v12'
-SAVED_MODEL_PATH = './model-v5.h5'
+DATA_FOLDER = './bridge_data/'
+NEW_MODEL_NAME = 'model-v13'
+SAVED_MODEL_PATH = './model-v12.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
@@ -299,7 +299,7 @@ all_samples = get_samples(DATA_FOLDER)
 
 train_samples, validation_samples = train_test_split(all_samples, test_size=0.15)
 batch_size = 32
-train_sample_len = ( 40000 // batch_size)*batch_size
+train_sample_len = ( 5000 // batch_size)*batch_size
 valid_sample_len = (len(validation_samples)//batch_size)*batch_size
 print('Total number of training samples:', len(train_samples))
 print('Total number of validation samples:', len(validation_samples))
