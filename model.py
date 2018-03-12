@@ -89,7 +89,7 @@ def generator(samples, img_path, batch_size=32):
         sklearn.utils.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
             batch_samples = samples[offset:offset+batch_size]
-
+            count = 0
             images = []
             measurements = []
         for line in batch_samples:
@@ -110,60 +110,59 @@ def generator(samples, img_path, batch_size=32):
                     measurement -= correction
                 images.append(image)
                 measurements.append(measurement)
-
+                count += 1
                 flip_prob = random.random()
                 if flip_prob > 0.5:
                     image_flipped = np.fliplr(image)
-                    measurement = -measurement
+                    measurement_flipped = -measurement
                     images.append(image_flipped)
                     measurements.append(measurement_flipped)
+                    count += 1
 
                 augment_prob = random.random()
                 if augment_prob > 0.5:
                     image_aug, measurement_aug = translate_shift(image, measurement)
                     images.append(image_aug)
                     measurements.append(measurement_aug)
+                    count += 1
+                if count == batch_size:
+                    break
 
             X_train = np.array(images)
             y_train = np.array(measurements)
             yield sklearn.utils.shuffle(X_train, y_train)
 
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda, Dropout
-from keras.layers import Conv2D, MaxPooling2D, Cropping2D
+from keras.layers import Flatten, Dense, Lambda, Dropout, ELU
+from keras.layers import Conv2D, MaxPooling2D, Cropping2D, Convolution2D
 from keras.models import load_model
 
 def create_nvidia_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))
-    model.add(Conv2D(3, 1, 1, border_mode='same', name='color_conv'))
     model.add(Cropping2D(cropping=((50,20), (0,0))))
     model.add(Conv2D(24,5,5,subsample=(2,2),activation = "elu"))
     model.add(Conv2D(36,5,5,subsample=(2,2),activation="elu"))
     model.add(Conv2D(48,5,5,subsample=(2,2), activation='elu'))
     model.add(Conv2D(64,3,3,activation="elu"))
-    model.add(Conv2D(64,3,3,activation="elu"))
     model.add(Flatten())
-    model.add(Dense(100))
-    model.add(Dropout(0.2))
-    model.add(Dense(50))
-    model.add(Dense(50))
-    model.add(Dropout(0.2))
+    model.add(Dense(120))
+    model.add(Dropout(0.5))
+    model.add(Dense(80))
+    model.add(Dense(40))
     model.add(Dense(1))
     return model
 
 def create_simple_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 -0.5, input_shape=(160,320,3)))
-    model.add(Conv2D(3, 1, 1, border_mode='same', name='color_conv'))
-    model.add(Cropping2D(cropping=((70, 25),(0,0))))
+    model.add(Cropping2D(cropping=((50, 25),(0,0))))
     model.add(Conv2D(24, 5, 5, subsample=(2,2), activation='elu'))
     model.add(Flatten() )
-    model.add(Dense(100) )
-    model.add(Dropout(0.2) )
-    model.add(Dense(50) )
-    model.add(Dropout(0.2) )
-    model.add(Dense(10) )
+    model.add(Dense(120) )
+    model.add(Dropout(0.5) )
+    model.add(Dense(80) )
+    model.add(Dense(40) )
     model.add(Dense(1) )
     return model
 
@@ -171,7 +170,6 @@ def create_simpler_model():
     model = Sequential()
     # model.add(Lambda(preprocess_batch, input_shape=(160, 320, 3), output_shape=(64, 64, 3)))
     model.add(Lambda(lambda x: x/255.0 -0.5, input_shape=(160,320,3)))
-    model.add(Conv2D(3, 1, 1, border_mode='same', name='color_conv'))
     # layer 1 output shape is 32x32x32
     model.add(Convolution2D(32, 5, 5, input_shape=(64, 64, 3), subsample=(2, 2), border_mode="same"))
     model.add(ELU())
@@ -233,13 +231,13 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './data/'
-NEW_MODEL_NAME = 'simpler-model-v0'
-SAVED_MODEL_PATH = './simple-model-v0.h5'
+DATA_FOLDER = './forumdata/track1_recovery_reverse/'
+NEW_MODEL_NAME = 'forum-model-t1-recovery-reverse-v5'
+SAVED_MODEL_PATH = './forum-model-t1-recovery-v4.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
-plot_data(all_samples, NEW_MODEL_NAME+'before', AWS=True)
+#plot_data(all_samples, NEW_MODEL_NAME+'before', AWS=True)
 #culled_samples = cull_data(all_samples, threshold = 0.5)
 #plot_data(culled_samples, NEW_MODEL_NAME+'after', AWS=True)
 
@@ -253,9 +251,12 @@ print('Total number of validation samples:', len(validation_samples))
 train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
 validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
 
-samples_per_epoch = (20000//BATCH_SIZE)*BATCH_SIZE
-
-#model = load_trained_model(SAVED_MODEL_PATH)
-model = create_simpler_model()
+samples_per_epoch = ((train_sample_len * 3)//batch_size)*batch_size
+print(samples_per_epoch)
+print(batch_size)
+print(20000//batch_size)
+print(20000//batch_size * batch_size)
+model = load_trained_model(SAVED_MODEL_PATH)
+#model = create_nvidia_model()
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
-     samples_per_epoch, nb_val_samples=3000, epochs = 3)
+     samples_per_epoch, 3000, epochs = 2)

@@ -62,7 +62,7 @@ def plot_data(samples, data_name, AWS=False):
         fig.savefig(data_name+'.png', bbox_inches='tight')
 
 def generator(samples, img_path, batch_size=32):
-    correction = 0.35
+    correction = 0.25
     num_samples = len(samples)
     limit_reached = True
     while 1: # Loop forever so the generator never terminates
@@ -138,7 +138,6 @@ def create_nvidia_model():
     #model.add(Dropout(0.25))
     model.add(Conv2D(48,5,5,subsample=(2,2), activation='elu'))
     model.add(Conv2D(64,3,3,activation="elu"))
-    model.add(Conv2D(64,3,3,activation="elu"))
     model.add(Flatten())
     model.add(Dense(100))
 #    model.add(Dropout(0.50))
@@ -154,11 +153,10 @@ def create_simple_model():
 
     model.add(Conv2D(24, 5, 5, subsample=(2,2), activation='elu'))
     model.add(Flatten() )
-    model.add(Dense(100) )
-    model.add(Dropout(0.2) )
-    model.add(Dense(50) )
-    model.add(Dropout(0.2) )
-    model.add(Dense(10) )
+    model.add(Dense(120))
+    model.add(Dropout(0.5) )
+    model.add(Dense(80) )
+    model.add(Dense(40) )
     model.add(Dense(1) )
     return model
 
