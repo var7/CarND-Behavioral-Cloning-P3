@@ -92,41 +92,41 @@ def generator(samples, img_path, batch_size=32):
             count = 0
             images = []
             measurements = []
-        for line in batch_samples:
-            img_choice = np.random.randint(3)
-            source_path = line[img_choice]
-            filename = source_path.split('/')[-1]
-            current_path = img_path + filename
-            image = cv2.imread(current_path)
-            if image is None:
-                print('Incorrect path', current_path)
-            else:
-                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                image = np.asarray(image)
-                measurement = float(line[3])
-                if img_choice == 1:
-                    measurement += correction
-                elif img_choice == 2:
-                    measurement -= correction
-                images.append(image)
-                measurements.append(measurement)
-                count += 1
-                flip_prob = random.random()
-                if flip_prob > 0.5:
-                    image_flipped = np.fliplr(image)
-                    measurement_flipped = -measurement
-                    images.append(image_flipped)
-                    measurements.append(measurement_flipped)
+            for line in batch_samples:
+                img_choice = np.random.randint(3)
+                source_path = line[img_choice]
+                filename = source_path.split('/')[-1]
+                current_path = img_path + filename
+                image = cv2.imread(current_path)
+                if image is None:
+                    print('Incorrect path', current_path)
+                else:
+                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    image = np.asarray(image)
+                    measurement = float(line[3])
+                    if img_choice == 1:
+                        measurement += correction
+                    elif img_choice == 2:
+                        measurement -= correction
+                    images.append(image)
+                    measurements.append(measurement)
                     count += 1
+                    flip_prob = random.random()
+                    if flip_prob > 0.5:
+                        image_flipped = np.fliplr(image)
+                        measurement_flipped = -measurement
+                        images.append(image_flipped)
+                        measurements.append(measurement_flipped)
+                        count += 1
 
-                augment_prob = random.random()
-                if augment_prob > 0.5:
-                    image_aug, measurement_aug = translate_shift(image, measurement)
-                    images.append(image_aug)
-                    measurements.append(measurement_aug)
-                    count += 1
-                if count == batch_size:
-                    break
+                    augment_prob = random.random()
+                    if augment_prob > 0.5:
+                        image_aug, measurement_aug = translate_shift(image, measurement)
+                        images.append(image_aug)
+                        measurements.append(measurement_aug)
+                        count += 1
+                    if count == batch_size:
+                        break
 
             X_train = np.array(images)
             y_train = np.array(measurements)
@@ -136,41 +136,40 @@ def full_generator(samples, img_path, batch_size=32):
     correction = 0.25
     num_samples = len(samples)
     limit_reached = True
+
     while 1: # Loop forever so the generator never terminates
         count  = 0
         sklearn.utils.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
             batch_samples = samples[offset:offset+batch_size]
-
+            print(len(batch_samples))
             images = []
             measurements = []
-        for line in batch_samples:
-            source_path = line[0]
-            filename = source_path.split('/')[-1]
-            current_path = img_path + filename
-            left_filename = line[1].split('/')[-1]
-            left_path = img_path + left_filename
-            right_filename = line[2].split('/')[-1]
-            right_path = img_path + right_filename
-            image = cv2.imread(current_path)
-            left_image = cv2.imread(left_path)
-            right_image = cv2.imread(right_path)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            left_image = cv2.cvtColor(left_image, cv2.COLOR_BGR2RGB)
-            right_image = cv2.cvtColor(right_image, cv2.COLOR_BGR2RGB)
-            image = np.asarray(image)
-            right_image = np.asarray(right_image)
-            left_image = np.asarray(left_image)
-            if image is None:
-                print('Incorrect path', current_path)
-            else:
-                measurement = float(line[3])
-                images.extend([image, left_image, right_image])
-                steering_left = measurement + correction
-                steering_right = measurement - correction
-                measurements.extend([measurement, steering_left, steering_right])
-                flip_prob = random.random()
-                if flip_prob > 0.5:
+            for line in batch_samples:
+                source_path = line[0]
+                filename = source_path.split('/')[-1]
+                current_path = img_path + filename
+                left_filename = line[1].split('/')[-1]
+                left_path = img_path + left_filename
+                right_filename = line[2].split('/')[-1]
+                right_path = img_path + right_filename
+                image = cv2.imread(current_path)
+                left_image = cv2.imread(left_path)
+                right_image = cv2.imread(right_path)
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                left_image = cv2.cvtColor(left_image, cv2.COLOR_BGR2RGB)
+                right_image = cv2.cvtColor(right_image, cv2.COLOR_BGR2RGB)
+                image = np.asarray(image)
+                right_image = np.asarray(right_image)
+                left_image = np.asarray(left_image)
+                if image is None:
+                    print('Incorrect path', current_path)
+                else:
+                    measurement = float(line[3])
+                    images.extend([image, left_image, right_image])
+                    steering_left = measurement + correction
+                    steering_right = measurement - correction
+                    measurements.extend([measurement, steering_left, steering_right])
                     left_image_flipped = np.fliplr(left_image)
                     image_flipped = np.fliplr(image)
                     right_image_flipped = np.fliplr(right_image)
@@ -180,15 +179,14 @@ def full_generator(samples, img_path, batch_size=32):
                     images.extend([image_flipped, left_image_flipped, \
                         right_image_flipped])
                     measurements.extend([measurement_flipped, steering_left_flipped, \
-                steering_right_flipped])
+                    steering_right_flipped])
 
-            if len(images) == batch_size:
-                print('breaking')
-                break
+                if len(images) == batch_size:
+                    print('breaking')
+                    break
 
             X_train = np.array(images)
             y_train = np.array(measurements)
-            print(X_train.shape)
             yield sklearn.utils.shuffle(X_train, y_train)
 
 from keras.models import Sequential
@@ -290,7 +288,7 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './data/'
+DATA_FOLDER = './forumdata/track1_central/'
 NEW_MODEL_NAME = 'forum-model-v0'
 SAVED_MODEL_PATH = './forum-model-v0.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
