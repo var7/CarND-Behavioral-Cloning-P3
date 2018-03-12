@@ -231,9 +231,9 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
-DATA_FOLDER = './forumdata/track1_recovery_reverse/'
-NEW_MODEL_NAME = 'forum-model-t1-recovery-reverse-v5'
-SAVED_MODEL_PATH = './forum-model-t1-recovery-v4.h5'
+DATA_FOLDER = './forumdata/track1_test/'
+NEW_MODEL_NAME = 'forum-model-t1-test-v6'
+SAVED_MODEL_PATH = './forum-model-t1-recovery-reverse-v5.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
 
 all_samples = get_samples(DATA_FOLDER)
