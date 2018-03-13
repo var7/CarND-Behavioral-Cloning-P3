@@ -54,6 +54,7 @@ The above command will load the trained model and use the model to make predicti
 ## Results
 The model works quite well on track 1 and can be seen in the below video. 
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/2eru35v02uE" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+[![Model driving around track](https://img.youtube.com/vi/2eru35v02uE/0.jpg)](https://www.youtube.com/watch?v=2eru35v02uE)
 
 
