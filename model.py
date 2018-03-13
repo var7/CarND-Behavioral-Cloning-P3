@@ -10,6 +10,9 @@ import numpy as np
 import sklearn
 
 def get_samples(DATA_FOLDER):
+    '''
+    function to load samples from DATA_FOLDER and return a list
+    '''
     samples = []
     with open(DATA_FOLDER+'driving_log.csv') as csvfile:
         reader = csv.reader(csvfile)
@@ -18,6 +21,11 @@ def get_samples(DATA_FOLDER):
     return samples
 
 def cull_data(samples, threshold = 0.2):
+    '''
+    function to remove instances of data from samples if the steering angle
+    is less than the threshold
+    Only to be used with full_generator function
+    '''
     ind_to_be_deleted = []
     total_length = len(samples)
     count = 0
@@ -45,6 +53,10 @@ def cull_data(samples, threshold = 0.2):
     return samples
 
 def plot_data(samples, data_name, AWS=False):
+    '''
+    function to plot histogram of the steering angles from samples and save with name
+    data_name. AWS = True saves the figure without showing it
+    '''
     angles = []
     for line in samples:
         if line[3] == 'steering':
@@ -62,6 +74,10 @@ def plot_data(samples, data_name, AWS=False):
         fig.savefig(data_name+'.png', bbox_inches='tight')
 
 def change_brightness(img, BRIGHTNESS_RANGE=0.25):
+    '''
+    function to randomly change the brightness of the image given
+    (did not use in final version)
+    '''
     temp = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # Compute a random brightness value and apply to the image
     brightness = BRIGHTNESS_RANGE + np.random.uniform()
@@ -70,6 +86,9 @@ def change_brightness(img, BRIGHTNESS_RANGE=0.25):
     return cv2.cvtColor(temp, cv2.COLOR_HSV2RGB)
 
 def translate_shift(img, angle, TRANS_X_RANGE=100, TRANS_Y_RANGE=40, TRANS_ANGLE=0.3):
+    '''
+    funtion to randomly perturb the images by translating them along x and y axes
+    '''
     # Compute X translation
     x_translation = (TRANS_X_RANGE * np.random.uniform()) - (TRANS_X_RANGE / 2)
     new_angle = angle + ((x_translation / TRANS_X_RANGE) * 2) * TRANS_ANGLE
@@ -81,6 +100,16 @@ def translate_shift(img, angle, TRANS_X_RANGE=100, TRANS_Y_RANGE=40, TRANS_ANGLE
     return [cv2.warpAffine(img, translation_matrix, (img.shape[1], img.shape[0])), new_angle]
 
 def generator(samples, img_path, batch_size=32):
+    '''
+    generator which generates samples of batch_size from samples data
+    to overcome the bias present in the steering angles to be close to 0, the 
+    data is generated randomly. 
+    1. one of three (center, left, right) images is chosen randomly
+    2. 50% of the time this image is also flipped
+    3. 50% of the time this image is also shifted using translate_shift
+    a count of the number of images generates is kept. 
+    when count == batch_size the generator yields
+    '''
     correction = 0.25
     num_samples = len(samples)
     limit_reached = True
@@ -135,6 +164,14 @@ def generator(samples, img_path, batch_size=32):
             yield sklearn.utils.shuffle(X_train, y_train)
 
 def full_generator(samples, img_path, batch_size=32):
+    '''
+    - generator which generates batches of data from samples of size batch_size
+    - augment data by adding (in addition to center image)
+        1. left and right image
+        2. flipped versions of left, right and center
+    keeps a count till batch_size is reached
+    (did not use in the final model)
+    '''
     correction = 0.25
     num_samples = len(samples)
     limit_reached = True
@@ -188,11 +225,13 @@ def full_generator(samples, img_path, batch_size=32):
             y_train = np.array(measurements)
             yield sklearn.utils.shuffle(X_train, y_train)
 
+# keras dependencies
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Dropout, ELU
 from keras.layers import Conv2D, MaxPooling2D, Cropping2D, Convolution2D
 from keras.models import load_model
 
+# nvidia architecture. used this finally
 def create_nvidia_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))
@@ -209,6 +248,7 @@ def create_nvidia_model():
     model.add(Dense(1))
     return model
 
+# simplest model with only 1 conv layer
 def create_simple_model():
     model = Sequential()
     model.add(Lambda(lambda x: x/255.0 -0.5, input_shape=(160,320,3)))
@@ -222,6 +262,7 @@ def create_simple_model():
     model.add(Dense(1) )
     return model
 
+# simpler model than nvidia model with 3 conv layers
 def create_simpler_model():
     model = Sequential()
     # model.add(Lambda(preprocess_batch, input_shape=(160, 320, 3), output_shape=(64, 64, 3)))
@@ -256,10 +297,9 @@ def create_simpler_model():
     # Finally a single output, since this is a regression problem
     model.add(Dense(1))
 
-    model.compile(optimizer="adam", loss="mse")
-
     return model
 
+# train the model given
 def train_model(model, model_name, train_generator, validation_generator,\
  train_sample_len, valid_sample_len, epochs=3):
 
@@ -273,10 +313,12 @@ def train_model(model, model_name, train_generator, validation_generator,\
     print('saved model', model_name)
     return history_object
 
+# load a trained model
 def load_trained_model(weights_path):
    model = load_model(weights_path)
    return model
 
+# plot training curves
 def training_plots(history_object, model_name):
     fig = plt.figure()
     plt.plot(history_object.history['loss'])
@@ -287,10 +329,12 @@ def training_plots(history_object, model_name):
     plt.legend(['training set', 'validation set'], loc='upper right')
     fig.savefig(model_name+'.png', bbox_inches='tight')
 
+
 DATA_FOLDER = './old_data/'
 NEW_MODEL_NAME = 'model-v12'
 SAVED_MODEL_PATH = './model-v5.h5'
 IMGPATH = DATA_FOLDER + 'IMG/'
+LOAD = True
 
 all_samples = get_samples(DATA_FOLDER)
 #plot_data(all_samples, NEW_MODEL_NAME+'before', AWS=True)
@@ -306,11 +350,11 @@ print('Total number of validation samples:', len(validation_samples))
 # compile and train the model using the generator function
 train_generator = generator(train_samples, IMGPATH, batch_size=batch_size)
 validation_generator = generator(validation_samples, IMGPATH, batch_size=batch_size)
-samples_per_epoch = ((len(train_samples))//batch_size)*batch_size
-print(samples_per_epoch)
-print(batch_size)
-print((len(train_samples))//batch_size)
-model = load_trained_model(SAVED_MODEL_PATH)
-#model = create_nvidia_model()
+
+if LOAD:
+    model = load_trained_model(SAVED_MODEL_PATH)
+else:
+    model = create_nvidia_model()
+
 train_model(model, NEW_MODEL_NAME, train_generator, validation_generator, \
      train_sample_len, valid_sample_len, epochs = 2)
